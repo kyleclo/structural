@@ -1,0 +1,9 @@
+# Basic libraries
+numpy>=1.12,<2.0
+scipy>=0.17.0
+pandas>=0.18.0
+
+# Cython 0.25.1 does not work with PyStan.
+Cython>=0.22,!=0.25.1
+pystan>=2.8
+
