@@ -1,6 +1,6 @@
-## Structural
+## Forecaster for Structural Time Series model forecasting
 
-This repo contains a "lite" version of Facebook's Prophet Python library.  I'm planning on extending this module in a different direction, but `example.py` shows that the base functionality (univariate time-series forecasting of daily data) hasn't changed.  See the original repo here: https://github.com/facebookincubator/prophet.  This code is released under the BSD 3-Clause license, which I've included in this repo under `LICENSE`.
+This repo contains a "lite" version of a structural time series model provided in Facebook's Prophet library for Python.  I'm planning on extending this module in a different direction, but `example.py` shows that the base functionality (univariate time-series forecasting of daily data) hasn't changed.  See the original repo here: https://github.com/facebookincubator/prophet.  This code is released under the BSD 3-Clause license, which I've included in this repo under `LICENSE`.
 
 #### Compared to Prophet
 
