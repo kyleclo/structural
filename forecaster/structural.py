@@ -192,7 +192,7 @@ class Structural(object):
         df = Structural.prepare_df(df)
         last_observed_date = df.iloc[-1]['ds']
         start_date = last_observed_date + pd.to_timedelta('1 day')
-        return pd.DataFrame({'ds': pd.date_range(start_date, periods=h)})
+        return pd.date_range(start_date, periods=h)
 
     # --------------------------------------------
     #
@@ -271,3 +271,4 @@ class Structural(object):
             return dates[dates.dt.is_month_start][1:-1]
         else:
             return pd.Series()
+
