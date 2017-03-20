@@ -1,26 +1,26 @@
 data {
   int T;                                // Sample size
   int<lower=1> K;                       // Number of seasonal vectors
-  vector[T] t;                            // Day
-  vector[T] y;                            // Time-series
+  vector[T] t;                          // Day
+  vector[T] y;                          // Time-series
   int S;                                // Number of changepoints
-  matrix[T, S] A;                   // Split indicators
-  real t_change[S];                 // Index of changepoints
-  matrix[T,K] X;                // season vectors
-  real<lower=0> sigma;              // scale on seasonality prior
-  real<lower=0> tau;                  // scale on changepoints prior
+  matrix[T, S] A;                       // Split indicators
+  real t_change[S];                     // Index of changepoints
+  matrix[T,K] X;                        // season vectors
+  real<lower=0> sigma;                  // scale on seasonality prior
+  real<lower=0> tau;                    // scale on changepoints prior
 }
 
 parameters {
-  real k;                            // Base growth rate
-  real m;                            // offset
-  vector[S] delta;                       // Rate adjustments
-  real<lower=0> sigma_obs;               // Observation noise (incl. seasonal variation)
-  vector[K] beta;                    // seasonal vector
+  real k;                               // Base growth rate
+  real m;                               // offset
+  vector[S] delta;                      // Rate adjustments
+  real<lower=0> sigma_obs;              // Observation noise (incl. seasonal variation)
+  vector[K] beta;                       // seasonal vector
 }
 
 transformed parameters {
-  vector[S] gamma;                  // adjusted offsets, for piecewise continuity
+  vector[S] gamma;                      // adjusted offsets, for piecewise continuity
 
   for (i in 1:S) {
     gamma[i] = -t_change[i] * delta[i];

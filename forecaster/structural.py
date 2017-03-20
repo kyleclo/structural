@@ -38,7 +38,7 @@ class Structural(object):
             weekly_order=3,
             seasonality_prior_sigma=10.0,
             changepoint_prior_sigma=0.05,
-            stan_model_path='./stan_models/'
+            stan_model_path=None
     ):
         # MEAN TREND
         self.trend = trend
