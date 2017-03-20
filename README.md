@@ -1,12 +1,16 @@
-## Forecaster for Structural Time Series model forecasting
+# Forecaster for Structural Time Series model forecasting
 
-This repo contains a "lite" version of a structural time series model provided in Facebook's Prophet library for Python.  I'm planning on extending this module in a different direction, but `example.py` shows that the base functionality (univariate time-series forecasting of daily data) hasn't changed.  See the original repo here: https://github.com/facebookincubator/prophet.  This code is released under the BSD 3-Clause license, which I've included in this repo under `LICENSE`.
+This Python module contains a "lite" version of the structural time series model implemented in Prophet, an open-source library released by Facebook.  See the original repo here: https://github.com/facebookincubator/prophet.
 
-#### Compared to Prophet
+Like Prophet, this module is for performing univariate time-series forecasting of daily data.
 
-This library provides a `Structural` class that implements Prophet's structural time series model with "linear growth" trend.  The original Stan model definition has not changed (see `linear.stan`).
+This code is released under the BSD 3-Clause license, which I've included in this repo under `LICENSE`.  
 
-Major differences between the `Structural` (here) and `Prophet` (original) classes include:
+## Compared to Prophet
+
+This library provides a `Structural` class that implements Prophet's structural time series model with "linear growth" trend, aka `Prophet(growth='linear')`.  The original Stan model definition has not changed (see `./stan_models/linear.stan`).
+
+Major differences between the `Structural` (this) and `Prophet` (original) classes include:
   
   - Prophet compiles its Stan models upon installation and loads them in `Prophet.fit()`. This library compiles and saves its Stan models when `Structural.fit()` is called for the first time, and future calls will use the saved copy.  This makes model development easier: For example, adding an option to force the Stan model to recompile at run-time is more convenient than reinstalling the library each time I modify the `.stan` file.
   - `Prophet.set_changepoints()` generated changepoints using `np.linspace` over the first 80% of training set dates.  `Structural.generate_changepoints()` changepoints are placed at the beginning of each month (excluding the first and last) in the training data.
@@ -27,19 +31,19 @@ I've currently removed support for these functions:
   2. Variability estimation (based on (1))
   3. Plotting
 
-#### Installation
+## Installation
 
 ```
 git clone https://github.com/kyleclo/forecaster.git
 pip install -r requirements.txt
 ```
 
-####
+## Usage
 
 `example.py` contains an example of using this library on the retail sales example dataset provided in the Prophet repo.  The defaults of `Structural` should look very similar to the defaults of `Prophet` other than the generated changepoints.
 
 
-#### Work in Progress
+## Backlog
 
 I'm currently working on (in no particular order):
 
