@@ -12,7 +12,7 @@ This module provides a `Structural` class that implements Prophet's structural t
 
 Major differences between the `Structural` (this) and `Prophet` (original) classes include:
   
-  - Now, Stan models are compiled and saved when `Structural.fit()` is called for the first time, and future calls will use the saved copy.  This is as opposed to Prophet, which compiles its Stan models during package installation.  I made this change so I could experiment with modifications to the Stan file without having to rerun the installation.
+  - Now, Stan models are compiled and saved when the `Structural` constructor is called for the first time, and future instantiations of the same model will load the pickled Stan model.  This is as opposed to Prophet, which compiles its Stan models during package installation.  I made this change so I could experiment with modifications to the Stan file without having to rerun the entire installation.
   
   - In this module, automated changepoint generation places changepoints at the first of each month (excluding the first and last) in the training data.  This is in contrast to Prophet, which generates changepoints using `np.linspace` over the first 80% of training set dates.
   
@@ -38,9 +38,15 @@ See the [backlog](#backlog) since I'm planning on adding back support for some o
 
 ## Installation
 
+Clone the repo if you want the source code
 ```
 git clone https://github.com/kyleclo/forecaster.git
 pip install -r requirements.txt
+```
+
+Or install the module using
+```
+pip install git+git://github.com/kyleclo/forecaster.git#egg=forecaster
 ```
 
 ## Usage

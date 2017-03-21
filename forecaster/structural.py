@@ -30,18 +30,17 @@ import pandas as pd
 class Structural(object):
     def __init__(
             self,
-            trend='linear',
+            stan_model_filepath,
             monthly_changepoints=True,
             yearly_seasonality=True,
             weekly_seasonality=True,
             yearly_order=10,
             weekly_order=3,
             seasonality_prior_sigma=10.0,
-            changepoint_prior_sigma=0.05,
-            stan_model_path=None
+            changepoint_prior_sigma=0.05
     ):
-        # MEAN TREND
-        self.trend = trend
+        # FILEPATH TO STAN MODEL (.PKL OR .STAN)
+        self.model = self.import_stan_model(stan_model_filepath)
 
         # CHANGEPOINTS IN MEAN TREND
         self.is_monthly_changepoints = monthly_changepoints
@@ -54,7 +53,7 @@ class Structural(object):
         self.weekly_order = weekly_order
         self.seasonality_prior_sigma = float(seasonality_prior_sigma)
 
-        # SET BY fit() IN PROCESSING PHASE
+        # PARAMETERS THAT DEPEND ON `df` SET BY fit() IN PROCESSING PHASE
         self.start_date = None
         self.end_date = None
         self.y_max = None
@@ -63,8 +62,6 @@ class Structural(object):
 
         # SET BY fit() IN STAN PHASE
         self.stan_fit_params = {}
-
-        self.stan_model_path = stan_model_path
 
     # --------------------------------------------
     #
@@ -92,20 +89,6 @@ class Structural(object):
         seasonality_df = self.make_seasonality_df(dates=df['ds'])
 
         # PART 2: STAN
-        stan_model_filepath = '{}/{}.stan'.format(self.stan_model_path,
-                                                  self.trend)
-        stan_model_pkl_filepath = '{}/{}.pkl'.format(self.stan_model_path,
-                                                     self.trend)
-        if os.path.exists(stan_model_pkl_filepath):
-            with open(stan_model_pkl_filepath, 'rb') as f:
-                model = pickle.load(f)
-        else:
-            with open(stan_model_filepath) as f:
-                model_code = f.read()
-            model = StanModel(model_code=model_code)
-            with open(stan_model_pkl_filepath, 'wb') as f:
-                pickle.dump(model, f)
-
         stan_data = {
             'T': y_scaled.size,
             'S': changepoint_df.shape[1],
@@ -130,9 +113,9 @@ class Structural(object):
             'sigma_obs': 1.0,
         }
 
-        self.stan_fit_params = dict(model.optimizing(data=stan_data,
-                                                     init=stan_init,
-                                                     iter=1e4))
+        self.stan_fit_params = dict(self.model.optimizing(data=stan_data,
+                                                          init=stan_init,
+                                                          iter=1e4))
         return self
 
     def predict(self, new_df):
@@ -272,3 +255,28 @@ class Structural(object):
         else:
             return pd.Series()
 
+    # --------------------------------------------
+    #
+    #                 IO METHODS
+    #
+    # --------------------------------------------
+
+    @staticmethod
+    def import_stan_model(stan_model_filepath):
+        if not os.path.exists(stan_model_filepath):
+            raise IOError('Invalid path to stan model.')
+
+        file_extension = stan_model_filepath.split('.')[-1]
+        if file_extension == 'pkl':
+            with open(stan_model_filepath, 'rb') as f:
+                model = pickle.load(f)
+        elif file_extension == 'stan':
+            with open(stan_model_filepath) as f:
+                model_code = f.read()
+            model = StanModel(model_code=model_code)
+            with open(stan_model_filepath.replace('.stan', '.pkl'), 'wb') as f:
+                pickle.dump(model, f)
+        else:
+            raise IOError('Input should be a .stan or .pkl file.')
+
+        return model
