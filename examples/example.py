@@ -1,25 +1,52 @@
-# Copyright (c) 2017-present, Kyle Lo
+# Copyright (c) 2017, Kyle Lo
 # All rights reserved.
 #
 # This source code is licensed under the BSD-style license found in the
-# LICENSE file in the root directory of this source tree. An additional grant
-# of patent rights can be found in the PATENTS file in the same directory.
+# LICENSE file in the root directory of this source tree.
 
-
+import os
 import pandas as pd
 from forecaster import Structural
+import pkg_resources
 
 if __name__ == '__main__':
-    df = pd.read_csv('../data/retail_sales.csv')
-    model = Structural(stan_model_filepath='../stan_models/linear.stan',
+    # --------------------------------------------
+    #
+    #                  EXAMPLE 1
+    #
+    # --------------------------------------------
+
+    # load data
+    df = pd.read_csv('retail_sales.csv')
+
+    # first time instantiating Structural compiles Stan model
+    stan_model_filepath = pkg_resources.resource_filename('forecaster',
+                                                          'stan_models/linear.stan')
+    model = Structural(stan_model_filepath,
                        monthly_changepoints=True,
                        yearly_seasonality=True,
                        weekly_seasonality=True).fit(df)
-    fitted_y = model.predict(df)
 
+    # get fitted values
+    fitted_yhat = model.predict(df)
+    print(fitted_yhat.head())
+
+    # forecast next 50 days
     new_df = pd.DataFrame({'ds': model.make_forecast_dates(df, h=50)})
-    forecast_y = model.predict(new_df)
+    forecasted_yhat = model.predict(new_df)
+    print(forecasted_yhat.head())
 
-    yhat = pd.concat([fitted_y, forecast_y]).reset_index(drop=True)
-    print(yhat)
-    # yhat.plot()
+    # --------------------------------------------
+    #
+    #                  EXAMPLE 2
+    #
+    # --------------------------------------------
+
+    # for subsequent runs, use pickled stan model
+    stan_model_filepath = stan_model_filepath.replace('.stan', '.pkl')
+
+    model2 = Structural(stan_model_filepath).fit(df)
+
+    fitted_yhat2 = model2.predict(df)
+    print(fitted_yhat2.head())
+
