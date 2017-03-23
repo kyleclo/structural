@@ -104,9 +104,12 @@ class Structural(object):
             'sigma_obs': 1.0,
         }
 
-        self.stan_fit_params = dict(self.model.optimizing(data=stan_data,
-                                                          init=stan_init,
-                                                          iter=1e4))
+        self.stan_fit_params = self.model.optimizing(data=stan_data,
+                                                     init=stan_init,
+                                                     iter=1e4)
+        for key, value in self.stan_fit_params.iteritems():
+            self.stan_fit_params[key] = value.reshape(-1,)
+
         return self
 
     def predict(self, new_df):
@@ -244,7 +247,7 @@ class Structural(object):
         if self.is_monthly_changepoints:
             return dates[dates.dt.is_month_start][1:-1]
         else:
-            return pd.Series()
+            return pd.Series(dates[0])
 
     # --------------------------------------------
     #

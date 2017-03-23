@@ -4,7 +4,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import os
 import pandas as pd
 from forecaster import Structural
 import pkg_resources
@@ -45,8 +44,10 @@ if __name__ == '__main__':
     # for subsequent runs, use pickled stan model
     stan_model_filepath = stan_model_filepath.replace('.stan', '.pkl')
 
-    model2 = Structural(stan_model_filepath).fit(df)
+    model2 = Structural(stan_model_filepath,
+                        monthly_changepoints=False,
+                        yearly_seasonality=False,
+                        weekly_seasonality=False).fit(df)
 
     fitted_yhat2 = model2.predict(df)
     print(fitted_yhat2.head())
-
