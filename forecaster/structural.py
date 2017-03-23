@@ -63,86 +63,12 @@ class Structural(object):
     def fit(self, df):
         """Fits model parameters using Stan"""
 
-        # PART 1: PROCESSING
-        df = self.prepare_df(df)
-
-        self.start_date = df['ds'].min()
-        self.end_date = df['ds'].max()
-        self.y_max = df['y'].max()
-
-        t = self.standardize_dates(dates=df['ds'])
-        y_scaled = self.standardize_y(y=df['y'])
-
-        self.cpt_dates = self.generate_monthly_changepoints(dates=df['ds'])
-        self.cpt_t = self.standardize_dates(dates=self.cpt_dates)
-
-        changepoint_df = self.make_changepoint_df(dates=df['ds'])
-        seasonality_df = self.make_seasonality_df(dates=df['ds'])
-
-        # PART 2: STAN
-        stan_data = {
-            'T': y_scaled.size,
-            'S': changepoint_df.shape[1],
-            'K': seasonality_df.shape[1],
-
-            'y': y_scaled,
-            't': t,
-
-            'X': seasonality_df,
-            'A': changepoint_df,
-            't_change': self.cpt_t,
-
-            'tau': self.changepoint_prior_sigma,
-            'sigma': self.seasonality_prior_sigma
-        }
-
-        stan_init = lambda: {
-            'k': y_scaled.iloc[-1] - y_scaled.iloc[0],
-            'm': y_scaled.iloc[0],
-            'delta': np.zeros(changepoint_df.shape[1]),
-            'beta': np.zeros(seasonality_df.shape[1]),
-            'sigma_obs': 1.0,
-        }
-
-        self.stan_fit_params = self.model.optimizing(data=stan_data,
-                                                     init=stan_init,
-                                                     iter=1e4)
-        for key, value in self.stan_fit_params.iteritems():
-            self.stan_fit_params[key] = value.reshape(-1,)
-
-        return self
+        raise NotImplementedError
 
     def predict(self, new_df):
         """Predicts values at each `ds` date in `new_df`"""
 
-        new_df = self.prepare_df(new_df)
-        new_t = self.standardize_dates(dates=new_df['ds'])
-
-        # k_t = self.stan_fit_params['k'] + np.matmul(
-        #     self.make_changepoint_df(new_df['ds']),
-        #     self.stan_fit_params['delta'])
-        # m_t = self.stan_fit_params['m'] + np.matmul(
-        #     self.make_changepoint_df(new_df['ds']),
-        #     - self.cpt_t * self.stan_fit_params['delta'])
-
-        # COMPUTE TREND OVER TIME
-        gammas = -self.cpt_t * self.stan_fit_params['delta']
-        k_t = self.stan_fit_params['k'].repeat(new_t.size)
-        m_t = self.stan_fit_params['m'].repeat(new_t.size)
-        for j, cpt_t in enumerate(self.cpt_t):
-            index_t = new_t >= cpt_t
-            k_t[index_t] += self.stan_fit_params['delta'][j]
-            m_t[index_t] += gammas.iloc[j]
-        trend = ((k_t * new_t + m_t) * self.y_max).rename('trend')
-
-        # COMPUTE SEASONALITY COMPONENT OVER TIME
-        seasonality = (self.make_seasonality_df(new_df['ds']).dot(
-            self.stan_fit_params['beta']) * self.y_max).rename('seasonality')
-
-        yhat = (trend + seasonality).rename('yhat')
-
-        # return pd.concat([new_df, yhat, trend, seasonality], axis=1)
-        return pd.concat([new_df, yhat], axis=1)
+        raise NotImplementedError
 
     # --------------------------------------------
     #
@@ -274,3 +200,84 @@ class Structural(object):
             raise IOError('Input should be a .stan or .pkl file.')
 
         return model
+
+
+class LinearTrend(Structural):
+    """
+
+    """
+
+    def fit(self, df):
+        # PART 1: PROCESSING
+        df = self.prepare_df(df)
+
+        self.start_date = df['ds'].min()
+        self.end_date = df['ds'].max()
+        self.y_max = df['y'].max()
+
+        t = self.standardize_dates(dates=df['ds'])
+        y_scaled = self.standardize_y(y=df['y'])
+
+        self.cpt_dates = self.generate_monthly_changepoints(dates=df['ds'])
+        self.cpt_t = self.standardize_dates(dates=self.cpt_dates)
+
+        changepoint_df = self.make_changepoint_df(dates=df['ds'])
+        seasonality_df = self.make_seasonality_df(dates=df['ds'])
+
+        # PART 2: STAN
+        stan_data = {
+            'T': y_scaled.size,
+            'S': changepoint_df.shape[1],
+            'K': seasonality_df.shape[1],
+
+            'y': y_scaled,
+            't': t,
+
+            'X': seasonality_df,
+            'A': changepoint_df,
+            't_change': self.cpt_t,
+
+            'tau': self.changepoint_prior_sigma,
+            'sigma': self.seasonality_prior_sigma
+        }
+
+        stan_init = lambda: {
+            'k': y_scaled.iloc[-1] - y_scaled.iloc[0],
+            'm': y_scaled.iloc[0],
+            'delta': np.zeros(changepoint_df.shape[1]),
+            'beta': np.zeros(seasonality_df.shape[1]),
+            'sigma_obs': 1.0,
+        }
+
+        self.stan_fit_params = self.model.optimizing(data=stan_data,
+                                                     init=stan_init,
+                                                     iter=1e4)
+        for key, value in self.stan_fit_params.iteritems():
+            self.stan_fit_params[key] = value.reshape(-1, )
+
+        return self
+
+    def predict(self, new_df):
+        """Predicts values at each `ds` date in `new_df`"""
+
+        new_df = self.prepare_df(new_df)
+        new_t = self.standardize_dates(dates=new_df['ds'])
+
+        # COMPUTE TREND OVER TIME
+        gammas = -self.cpt_t * self.stan_fit_params['delta']
+        k_t = self.stan_fit_params['k'].repeat(new_t.size)
+        m_t = self.stan_fit_params['m'].repeat(new_t.size)
+        for j, cpt_t in enumerate(self.cpt_t):
+            index_t = new_t >= cpt_t
+            k_t[index_t] += self.stan_fit_params['delta'][j]
+            m_t[index_t] += gammas.iloc[j]
+        trend = ((k_t * new_t + m_t) * self.y_max).rename('trend')
+
+        # COMPUTE SEASONALITY COMPONENT OVER TIME
+        seasonality = (self.make_seasonality_df(new_df['ds']).dot(
+            self.stan_fit_params['beta']) * self.y_max).rename('seasonality')
+
+        yhat = (trend + seasonality).rename('yhat')
+
+        # return pd.concat([new_df, yhat, trend, seasonality], axis=1)
+        return pd.concat([new_df, yhat], axis=1)

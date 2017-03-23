@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import pandas as pd
-from forecaster import Structural
+from forecaster import LinearTrend
 import pkg_resources
 
 if __name__ == '__main__':
@@ -21,10 +21,10 @@ if __name__ == '__main__':
     # first time instantiating Structural compiles Stan model
     stan_model_filepath = pkg_resources.resource_filename('forecaster',
                                                           'stan_models/linear.stan')
-    model = Structural(stan_model_filepath,
-                       monthly_changepoints=True,
-                       yearly_seasonality=True,
-                       weekly_seasonality=True).fit(df)
+    model = LinearTrend(stan_model_filepath,
+                        monthly_changepoints=True,
+                        yearly_seasonality=True,
+                        weekly_seasonality=True).fit(df)
 
     # get fitted values
     fitted_yhat = model.predict(df)
@@ -44,10 +44,10 @@ if __name__ == '__main__':
     # for subsequent runs, use pickled stan model
     stan_model_filepath = stan_model_filepath.replace('.stan', '.pkl')
 
-    model2 = Structural(stan_model_filepath,
-                        monthly_changepoints=False,
-                        yearly_seasonality=False,
-                        weekly_seasonality=False).fit(df)
+    model2 = LinearTrend(stan_model_filepath,
+                         monthly_changepoints=False,
+                         yearly_seasonality=False,
+                         weekly_seasonality=False).fit(df)
 
     fitted_yhat2 = model2.predict(df)
     print(fitted_yhat2.head())

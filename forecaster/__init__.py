@@ -1,1 +1,1 @@
-from forecaster.structural import Structural
+from forecaster.structural import Structural, LinearTrend
