@@ -10,7 +10,6 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import os
 import pickle
 from pystan import StanModel
 
@@ -31,7 +30,7 @@ class Structural(object):
             intercept_prior_sigma=5.0,
             seasonality_prior_sigma=10.0,
             changepoint_prior_sigma=0.05,
-            y_scale_prior_sigma=0.5
+            error_sd_prior_sigma=0.5
     ):
         # FILEPATH TO STAN MODEL (.PKL OR .STAN)
         self.model = self.import_stan_model(stan_model_filepath)
@@ -50,7 +49,7 @@ class Structural(object):
         self.seasonality_prior_sigma = float(seasonality_prior_sigma)
 
         # ERROR OF TIME SERIES
-        self.y_scale_prior_sigma = y_scale_prior_sigma
+        self.error_sd_prior_sigma = error_sd_prior_sigma
 
         # PARAMETERS THAT DEPEND ON `df` SET BY fit() IN PROCESSING PHASE
         self.start_date = None
@@ -67,6 +66,19 @@ class Structural(object):
     #                    API
     #
     # --------------------------------------------
+
+    @staticmethod
+    def create(name, **kwargs):
+        possible_models = {
+            'linear_trend': LinearTrend
+        }
+
+        if possible_models.get(name) is None:
+            raise Exception('Model {} doesnt exist.'.format(name))
+        else:
+            model = possible_models[name](**kwargs)
+
+        return model
 
     def fit(self, df):
         """Fits model parameters using Stan"""
@@ -190,23 +202,19 @@ class Structural(object):
     # --------------------------------------------
 
     @staticmethod
+    def compile_stan_model(stan_model_filepath):
+        with open(stan_model_filepath) as f:
+            model_code = f.read()
+
+        model = StanModel(model_code=model_code)
+
+        with open(stan_model_filepath.replace('.stan', '.pkl'), 'wb') as f:
+            pickle.dump(model, f)
+
+    @staticmethod
     def import_stan_model(stan_model_filepath):
-        if not os.path.exists(stan_model_filepath):
-            raise IOError('Invalid path to stan model.')
-
-        file_extension = stan_model_filepath.split('.')[-1]
-        if file_extension == 'pkl':
-            with open(stan_model_filepath, 'rb') as f:
-                model = pickle.load(f)
-        elif file_extension == 'stan':
-            with open(stan_model_filepath) as f:
-                model_code = f.read()
-            model = StanModel(model_code=model_code)
-            with open(stan_model_filepath.replace('.stan', '.pkl'), 'wb') as f:
-                pickle.dump(model, f)
-        else:
-            raise IOError('Input should be a .stan or .pkl file.')
-
+        with open(stan_model_filepath, 'rb') as f:
+            model = pickle.load(f)
         return model
 
 
@@ -237,7 +245,7 @@ class LinearTrend(Structural):
             'T': y_scaled.size,
             't': t,
             'y': y_scaled,
-            'tau': self.y_scale_prior_sigma,
+            'tau': self.error_sd_prior_sigma,
 
             'sigma_m': self.slope_prior_sigma,
             'sigma_b': self.intercept_prior_sigma,
