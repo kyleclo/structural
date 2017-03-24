@@ -27,11 +27,16 @@ class Structural(object):
             weekly_seasonality=True,
             yearly_order=10,
             weekly_order=3,
+            slope_prior_sigma=5.0,
+            intercept_prior_sigma=5.0,
             seasonality_prior_sigma=10.0,
-            changepoint_prior_sigma=0.05
+            changepoint_prior_sigma=0.05,
+            y_scale_prior_sigma=0.5
     ):
         # FILEPATH TO STAN MODEL (.PKL OR .STAN)
         self.model = self.import_stan_model(stan_model_filepath)
+        self.slope_prior_sigma = slope_prior_sigma
+        self.intercept_prior_sigma = intercept_prior_sigma
 
         # CHANGEPOINTS IN MEAN TREND
         self.is_monthly_changepoints = monthly_changepoints
@@ -43,6 +48,9 @@ class Structural(object):
         self.yearly_order = yearly_order
         self.weekly_order = weekly_order
         self.seasonality_prior_sigma = float(seasonality_prior_sigma)
+
+        # ERROR OF TIME SERIES
+        self.y_scale_prior_sigma = y_scale_prior_sigma
 
         # PARAMETERS THAT DEPEND ON `df` SET BY fit() IN PROCESSING PHASE
         self.start_date = None
@@ -227,26 +235,29 @@ class LinearTrend(Structural):
         # PART 2: STAN
         stan_data = {
             'T': y_scaled.size,
-            'S': changepoint_df.shape[1],
-            'K': seasonality_df.shape[1],
-
-            'y': y_scaled,
             't': t,
+            'y': y_scaled,
+            'tau': self.y_scale_prior_sigma,
 
+            'sigma_m': self.slope_prior_sigma,
+            'sigma_b': self.intercept_prior_sigma,
+
+            'C': changepoint_df.shape[1],
+            'cpt_t': self.cpt_t,
+            'cpt_df': changepoint_df,
+            'sigma_delta': self.changepoint_prior_sigma,
+
+            'S': seasonality_df.shape[1],
             'X': seasonality_df,
-            'A': changepoint_df,
-            't_change': self.cpt_t,
-
-            'tau': self.changepoint_prior_sigma,
-            'sigma': self.seasonality_prior_sigma
+            'sigma_beta': self.seasonality_prior_sigma
         }
 
         stan_init = lambda: {
-            'k': y_scaled.iloc[-1] - y_scaled.iloc[0],
-            'm': y_scaled.iloc[0],
+            'm': y_scaled.iloc[-1] - y_scaled.iloc[0],
+            'b': y_scaled.iloc[0],
             'delta': np.zeros(changepoint_df.shape[1]),
             'beta': np.zeros(seasonality_df.shape[1]),
-            'sigma_obs': 1.0,
+            'sigma_y': 1.0,
         }
 
         self.stan_fit_params = self.model.optimizing(data=stan_data,
@@ -265,13 +276,13 @@ class LinearTrend(Structural):
 
         # COMPUTE TREND OVER TIME
         gammas = -self.cpt_t * self.stan_fit_params['delta']
-        k_t = self.stan_fit_params['k'].repeat(new_t.size)
-        m_t = self.stan_fit_params['m'].repeat(new_t.size)
+        m_b = self.stan_fit_params['m'].repeat(new_t.size)
+        b_t = self.stan_fit_params['b'].repeat(new_t.size)
         for j, cpt_t in enumerate(self.cpt_t):
             index_t = new_t >= cpt_t
-            k_t[index_t] += self.stan_fit_params['delta'][j]
-            m_t[index_t] += gammas.iloc[j]
-        trend = ((k_t * new_t + m_t) * self.y_max).rename('trend')
+            m_b[index_t] += self.stan_fit_params['delta'][j]
+            b_t[index_t] += gammas.iloc[j]
+        trend = ((m_b * new_t + b_t) * self.y_max).rename('trend')
 
         # COMPUTE SEASONALITY COMPONENT OVER TIME
         seasonality = (self.make_seasonality_df(new_df['ds']).dot(

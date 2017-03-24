@@ -1,40 +1,49 @@
 data {
-  int T;                                // Sample size
-  int<lower=1> K;                       // Number of seasonal vectors
-  vector[T] t;                          // Day
-  vector[T] y;                          // Time-series
-  int S;                                // Number of changepoints
-  matrix[T, S] A;                       // Split indicators
-  real t_change[S];                     // Index of changepoints
-  matrix[T,K] X;                        // season vectors
-  real<lower=0> sigma;                  // scale on seasonality prior
-  real<lower=0> tau;                    // scale on changepoints prior
+  int T;                                // sample size
+  vector[T] t;                          // time indices
+  vector[T] y;                          // time series values
+
+  // Stan manual Sec 5.2 recommend default=5.0 if data standardized
+  real<lower=0> sigma_m;                // known sd on `m` prior
+  real<lower=0> sigma_b;                // known sd on `b` prior
+
+  int C;                                // number of changepoints
+  real cpt_t[C];                        // changepoint time indices
+  matrix[T, C] cpt_df;                  // changepoint indicator features
+  real<lower=0> sigma_delta;            // known scale param on `delta` prior (Prophet default=0.05)
+
+  int<lower=1> S;                       // number of seasonality features
+  matrix[T, S] X;                       // seasonality features
+  real<lower=0> sigma_beta;             // known sd on `beta` prior (Prophet default=10.0)
+
+  // Prophet provided default=0.5
+  real<lower=0> tau;                    // known sd on `sigma_y` prior
 }
 
 parameters {
-  real k;                               // Base growth rate
-  real m;                               // offset
-  vector[S] delta;                      // Rate adjustments
-  real<lower=0> sigma_obs;              // Observation noise (incl. seasonal variation)
-  vector[K] beta;                       // seasonal vector
+  real m;                               // base slope
+  real b;                               // base intercept
+  vector[C] delta;                      // changepoint effects (slope changes)
+  vector[S] beta;                       // seasonality effects
+  real<lower=0> sigma_y;                // sd of observations
 }
 
 transformed parameters {
-  vector[S] gamma;                      // adjusted offsets, for piecewise continuity
+  vector[C] gamma;                      // changes to intercept at changepoints
 
-  for (i in 1:S) {
-    gamma[i] = -t_change[i] * delta[i];
+  for (i in 1:C) {
+    gamma[i] = -cpt_t[i] * delta[i];
   }
 }
 
 model {
   //priors
-  k ~ normal(0, 5);
-  m ~ normal(0, 5);
-  delta ~ double_exponential(0, tau);
-  sigma_obs ~ normal(0, 0.5);
-  beta ~ normal(0, sigma);
+  m ~ normal(0, sigma_m);
+  b ~ normal(0, sigma_b);
+  delta ~ double_exponential(0, sigma_delta);
+  beta ~ normal(0, sigma_beta);
+  sigma_y ~ normal(0, tau);
 
   // Likelihood
-  y ~ normal((k + A * delta) .* t + (m + A * gamma) + X * beta, sigma_obs);
+  y ~ normal((m + cpt_df * delta) .* t + (b + cpt_df * gamma) + X * beta, sigma_y);
 }

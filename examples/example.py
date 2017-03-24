@@ -28,7 +28,8 @@ if __name__ == '__main__':
 
     # get fitted values
     fitted_yhat = model.predict(df)
-    print(fitted_yhat.head())
+    fitted_yhat.plot()
+    print(fitted_yhat.head(50))
 
     # forecast next 50 days
     new_df = pd.DataFrame({'ds': model.make_forecast_dates(df, h=50)})
