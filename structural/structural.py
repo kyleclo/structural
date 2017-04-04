@@ -41,14 +41,14 @@ class Structural(object):
         # DERIVED FROM `df` DURING PROCESSING PHASE OF fit()
         self.start_date = None
         self.end_date = None
-        self.t = None
 
         self.y_min = None
         self.y_max = None
-        self.y_scaled = None
 
         self.cpt_dates = None
         self.cpt_t = None
+
+        self.last_observed_date = None
 
         # SET BY fit() IN STAN PHASE
         self.stan_fit_params = {}
@@ -80,26 +80,29 @@ class Structural(object):
 
         self.start_date = df['ds'].min()
         self.end_date = df['ds'].max()
-        self.t = self.standardize_dates(dates=df['ds'])
 
         self.y_min = df['y'].min()
         self.y_max = df['y'].max()
-        self.y_scaled = self.standardize_y(y=df['y'])
 
         self.cpt_dates = self.generate_monthly_changepoints(dates=df['ds'])
         self.cpt_t = self.standardize_dates(dates=self.cpt_dates)
 
+        self.last_observed_date = df['ds'].iloc[-1]
+
+        t = self.standardize_dates(dates=df['ds'])
+        y_scaled = self.standardize_y(y=df['y'])
         changepoint_df = self.make_changepoint_df(df)
         seasonality_df = self.make_seasonality_df(df)
 
         # PART 2: STAN
-        self.stan_fit_params = self._fit_with_stan(df,
+        self.stan_fit_params = self._fit_with_stan(t,
+                                                   y_scaled,
                                                    changepoint_df,
                                                    seasonality_df)
 
         return self
 
-    def _fit_with_stan(self, df, changepoint_df, seasonality_df):
+    def _fit_with_stan(self, t, y_scaled, changepoint_df, seasonality_df):
         raise NotImplementedError
 
     def predict(self, new_df):
@@ -115,6 +118,31 @@ class Structural(object):
 
     def _predict_standardized(self, new_df, new_t):
         raise NotImplementedError
+
+    # --------------------------------------------
+    #
+    #                 IO METHODS
+    #
+    # --------------------------------------------
+
+    @staticmethod
+    def compile_stan_model(input_stan_filepath, output_model_filepath=None):
+        with open(input_stan_filepath) as f:
+            model_code = f.read()
+
+        model = StanModel(model_code=model_code)
+
+        if output_model_filepath is None:
+            output_model_filepath = input_stan_filepath.replace('.stan',
+                                                                '.pkl')
+        with open(output_model_filepath, 'wb') as f:
+            pickle.dump(model, f)
+
+    @staticmethod
+    def import_stan_model(stan_model_filepath):
+        with open(stan_model_filepath, 'rb') as f:
+            model = pickle.load(f)
+        return model
 
     # --------------------------------------------
     #
@@ -134,18 +162,13 @@ class Structural(object):
         return (dates - self.start_date) / (self.end_date - self.start_date)
 
     def standardize_y(self, y):
-        # return y / self.y_max
         return (y - self.y_min) / (self.y_max - self.y_min)
 
     def unstandardize_y(self, y):
         return y * (self.y_max - self.y_min) + self.y_min
 
-    # TODO: change to take last_observed_date
-    @staticmethod
-    def make_forecast_dates(df, h):
-        df = Structural.prepare_df(df)
-        last_observed_date = df.iloc[-1]['ds']
-        start_date = last_observed_date + pd.to_timedelta('1 day')
+    def make_forecast_dates(self, h):
+        start_date = self.last_observed_date + pd.to_timedelta('1 day')
         return pd.date_range(start_date, periods=h)
 
     # --------------------------------------------
@@ -226,28 +249,6 @@ class Structural(object):
         else:
             return pd.Series(dates[0])
 
-    # --------------------------------------------
-    #
-    #                 IO METHODS
-    #
-    # --------------------------------------------
-
-    @staticmethod
-    def compile_stan_model(stan_model_filepath):
-        with open(stan_model_filepath) as f:
-            model_code = f.read()
-
-        model = StanModel(model_code=model_code)
-
-        with open(stan_model_filepath.replace('.stan', '.pkl'), 'wb') as f:
-            pickle.dump(model, f)
-
-    @staticmethod
-    def import_stan_model(stan_model_filepath):
-        with open(stan_model_filepath, 'rb') as f:
-            model = pickle.load(f)
-        return model
-
 
 class LinearTrend(Structural):
     """
@@ -272,13 +273,13 @@ class LinearTrend(Structural):
 
         super(LinearTrend, self).__init__(**kwargs)
 
-    def _fit_with_stan(self, df, changepoint_df, seasonality_df):
+    def _fit_with_stan(self, t, y_scaled, changepoint_df, seasonality_df):
         """Returns dict of MAP estimates"""
 
         stan_data = {
-            'T': self.y_scaled.size,
-            't': self.t,
-            'y': self.y_scaled,
+            'T': y_scaled.size,
+            't': t,
+            'y': y_scaled,
             'tau': self.error_sd_prior_sigma,
 
             'sigma_m': self.slope_prior_sigma,
@@ -295,8 +296,8 @@ class LinearTrend(Structural):
         }
 
         stan_init = lambda: {
-            'm': self.y_scaled.iloc[-1] - self.y_scaled.iloc[0],
-            'b': self.y_scaled.iloc[0],
+            'm': y_scaled.iloc[-1] - y_scaled.iloc[0],
+            'b': y_scaled.iloc[0],
             'delta': np.zeros(changepoint_df.shape[1]),
             'beta': np.zeros(seasonality_df.shape[1]),
             'sigma_y': 1.0,

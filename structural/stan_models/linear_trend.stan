@@ -15,7 +15,7 @@ data {
   real<lower=0> sigma_m;                // known sd on `m` prior
   real<lower=0> sigma_b;                // known sd on `b` prior
 
-  int C;                                // number of changepoints
+  int<lower=1> C;                       // number of changepoints
   vector[C] cpt_t;                      // changepoint time indices
   matrix[T, C] cpt_df;                  // changepoint indicator features
   real<lower=0> sigma_delta;            // known scale param on `delta` prior
@@ -50,7 +50,6 @@ model {
   delta ~ double_exponential(0, sigma_delta);
   beta ~ normal(0, sigma_beta);
   sigma_y ~ cauchy(0, tau);
-  //sigma_y ~ normal(0, tau);
 
   // Likelihood
   y ~ normal((m + cpt_df * delta) .* t + (b + cpt_df * gamma) + X * beta, sigma_y);

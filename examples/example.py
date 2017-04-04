@@ -42,7 +42,7 @@ if __name__ == '__main__':
     print(yhat_fitted.head())
 
     # forecast next 1000 days
-    new_df = pd.DataFrame({'ds': model.make_forecast_dates(df, h=1000)})
+    new_df = pd.DataFrame({'ds': model.make_forecast_dates(h=1000)})
     yhat_forecasted = model.predict(new_df)
     print('Forecasted values: \n')
     print(yhat_forecasted.head())
