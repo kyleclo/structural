@@ -18,38 +18,25 @@ import pandas as pd
 
 
 class Structural(object):
-    def __init__(
-            self,
-            stan_model_filepath,
-            monthly_changepoints=True,
-            yearly_seasonality=True,
-            weekly_seasonality=True,
-            yearly_order=5,
-            weekly_order=3,
-            slope_prior_sigma=5.0,
-            intercept_prior_sigma=5.0,
-            seasonality_prior_sigma=5.0,
-            changepoint_prior_sigma=0.5,
-            error_sd_prior_sigma=5.0
-    ):
+    def __init__(self,
+                 stan_model_filepath,
+                 is_monthly_changepoints=True,
+                 is_yearly_seasonality=True,
+                 is_weekly_seasonality=True,
+                 yearly_order=5,
+                 weekly_order=3):
+
         # FILEPATH TO STAN MODEL (.PKL OR .STAN)
         self.model = self.import_stan_model(stan_model_filepath)
-        self.slope_prior_sigma = slope_prior_sigma
-        self.intercept_prior_sigma = intercept_prior_sigma
 
         # CHANGEPOINTS IN MEAN TREND
-        self.is_monthly_changepoints = monthly_changepoints
-        self.changepoint_prior_sigma = float(changepoint_prior_sigma)
+        self.is_monthly_changepoints = is_monthly_changepoints
 
         # SEASONALITY COMPONENT
-        self.is_yearly_seasonality = yearly_seasonality
-        self.is_weekly_seasonality = weekly_seasonality
+        self.is_yearly_seasonality = is_yearly_seasonality
+        self.is_weekly_seasonality = is_weekly_seasonality
         self.yearly_order = yearly_order
         self.weekly_order = weekly_order
-        self.seasonality_prior_sigma = float(seasonality_prior_sigma)
-
-        # ERROR OF TIME SERIES
-        self.error_sd_prior_sigma = error_sd_prior_sigma
 
         # PARAMETERS THAT DEPEND ON `df` SET BY fit() IN PROCESSING PHASE
         self.start_date = None
@@ -223,6 +210,24 @@ class LinearTrend(Structural):
     """
 
     """
+
+    def __init__(self,
+                 slope_prior_sigma=5.0,
+                 intercept_prior_sigma=5.0,
+                 seasonality_prior_sigma=5.0,
+                 changepoint_prior_sigma=0.5,
+                 error_sd_prior_sigma=5.0,
+                 **kwargs):
+
+        self.name = 'linear_trend'
+
+        self.slope_prior_sigma = slope_prior_sigma
+        self.intercept_prior_sigma = intercept_prior_sigma
+        self.changepoint_prior_sigma = float(changepoint_prior_sigma)
+        self.seasonality_prior_sigma = float(seasonality_prior_sigma)
+        self.error_sd_prior_sigma = error_sd_prior_sigma
+
+        super(LinearTrend, self).__init__(**kwargs)
 
     def fit(self, df):
         # PART 1: PROCESSING

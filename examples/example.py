@@ -34,7 +34,7 @@ if __name__ == '__main__':
                                                                   '.stan'))
 
     # fit model
-    model = LinearTrend(stan_model_filepath).fit(df)
+    model = LinearTrend(stan_model_filepath=stan_model_filepath).fit(df)
 
     # get fitted values
     yhat_fitted = model.predict(df)
@@ -61,17 +61,17 @@ if __name__ == '__main__':
 
     # it's possible to change arguments while using same pickled Stan model
     # for example, let's use Prophet's defaults for `*_order` and `*_sigma`
-    model2 = LinearTrend(stan_model_filepath,
-                        monthly_changepoints=True,
-                        yearly_seasonality=True,
-                        weekly_seasonality=True,
-                        yearly_order=10,
-                        weekly_order=3,
-                        slope_prior_sigma=5.0,
-                        intercept_prior_sigma=5.0,
-                        seasonality_prior_sigma=10.0,
-                        changepoint_prior_sigma=0.05,
-                        error_sd_prior_sigma=0.5).fit(df)
+    model2 = LinearTrend(stan_model_filepath=stan_model_filepath,
+                         is_monthly_changepoints=True,
+                         is_yearly_seasonality=True,
+                         is_weekly_seasonality=True,
+                         yearly_order=10,
+                         weekly_order=3,
+                         slope_prior_sigma=5.0,
+                         intercept_prior_sigma=5.0,
+                         seasonality_prior_sigma=10.0,
+                         changepoint_prior_sigma=0.05,
+                         error_sd_prior_sigma=0.5).fit(df)
 
     # --------------------------------------------
     #
@@ -82,10 +82,8 @@ if __name__ == '__main__':
     # `Structural` also provides a method for choosing subclass at runtime
     params = {
         'stan_model_filepath': stan_model_filepath,
-        'monthly_changepoints': False,
-        'yearly_seasonality': False,
-        'weekly_seasonality': False
+        'is_monthly_changepoints': False,
+        'is_yearly_seasonality': False,
+        'is_weekly_seasonality': False
     }
     model3 = Structural.create(name=STAN_MODEL_NAME, **params).fit(df)
-
-
