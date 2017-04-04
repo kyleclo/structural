@@ -17,18 +17,18 @@ from setuptools import setup, find_packages
 #     long_description = f.read()
 
 setup(
-    name='forecaster',
+    name='structural',
 
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
     version='0.0.1',
 
-    description='A module for structural time series modeling and forecasting',
+    description='Structural time series modeling and forecasting',
     #long_description='',
 
     # The project's main homepage.
-    url='https://github.com/kyleclo/forecaster',
+    url='https://github.com/kyleclo/structural',
 
     # Author details
     author='Kyle Lo',
@@ -59,7 +59,7 @@ setup(
     ],
 
     # What does your project relate to?
-    keywords='time series forecast changepoint prophet stan',
+    keywords='time series predict forecast changepoint prophet stan structural',
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
@@ -89,7 +89,7 @@ setup(
     # have to be included in MANIFEST as well.
     include_package_data=True,
     package_data={
-        'forecaster': ['stan_models/*.stan']
+        'structural': ['stan_models/*.stan']
     },
 
     # Although 'package_data' is the preferred approach, in some case you may

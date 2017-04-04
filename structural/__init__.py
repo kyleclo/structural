@@ -1,0 +1,1 @@
+from structural import Structural, LinearTrend

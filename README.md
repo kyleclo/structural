@@ -1,14 +1,52 @@
-# Forecaster for Structural Time Series model forecasting
+# Structural time series model forecasting
 
-This Python module contains a "lite" version of the structural time series model implemented in Prophet, an open-source library released by Facebook.  See the original repo here: https://github.com/facebookincubator/prophet.
+**Structural** is a Python module for structural time series modeling and forecasting of daily univariate data.
 
-Like Prophet, this module is for performing univariate time-series forecasting of daily data.
+This code is released under the BSD 3-Clause license, which I've included in this repo under `/LICENSE`.
 
-This code is released under the BSD 3-Clause license, which I've included in this repo under `/LICENSE`.  
+
+## Installation
+
+Clone the repo if you want the source code
+```
+git clone https://github.com/kyleclo/structural.git
+pip install -r requirements.txt
+```
+
+Or install the module using
+```
+pip install git+git://github.com/kyleclo/structural.git#egg=structural
+```
+
+
+## Usage
+
+This module provides a `Structural` base class.
+
+`/example.py` contains an example of using this library on the retail sales example dataset provided in the Prophet repo.
+
+
+
+## Backlog
+
+I'm currently working on (in no particular order):
+
+  1. Adding in MCMC sampling + variability estimation
+  2. Adding in manual changepoint selection
+  3. Adding in holiday indicators
+  4. Adding a prior over changepoint locations
+  5. Adding in ARMA errors
+  6. Adding a testing suite
+  7. Creating a pypi distribution
+  
+
+## About
+
+This project was inspired by **Prophet**, an open-source library released by Facebook.  See their repo here: https://github.com/facebookincubator/prophet.
+
 
 ## Compared to Prophet
-
-This module provides a `Structural` class that implements Prophet's structural time series model with "linear growth" trend, aka `Prophet(growth='linear')`.  The original Stan model definition has not changed (see `/stan_models/linear.stan`).
+ 
 
 Major differences between the `Structural` (this) and `Prophet` (original) classes include:
   
@@ -35,36 +73,3 @@ I've currently removed support for these functions:
   3. Plotting
 
 See the [backlog](#backlog) since I'm planning on adding back support for some of these.
-
-## Installation
-
-Clone the repo if you want the source code
-```
-git clone https://github.com/kyleclo/forecaster.git
-pip install -r requirements.txt
-```
-
-Or install the module using
-```
-pip install git+git://github.com/kyleclo/forecaster.git#egg=forecaster
-```
-
-## Usage
-
-`/example.py` contains an example of using this library on the retail sales example dataset provided in the Prophet repo.  The defaults of `Structural` should look very similar to the defaults of `Prophet` other than the generated changepoints.
-
-
-## Backlog
-
-I'm currently working on (in no particular order):
-
-  1. Adding in MCMC sampling + variability estimation
-  2. Adding in manual changepoint selection
-  3. Adding in holiday indicators
-  4. Adding a prior over changepoint locations
-  5. Adding in ARMA errors
-  6. Adding a testing suite
-  7. Creating a pypi distribution
-  
-
-

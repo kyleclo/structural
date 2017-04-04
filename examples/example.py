@@ -5,14 +5,14 @@
 # LICENSE file in the root directory of this source tree.
 
 import pandas as pd
-from forecaster import Structural, LinearTrend
+from structural import Structural, LinearTrend
 
 import matplotlib.pyplot as plt
 
 import os
 import pkg_resources
 
-STAN_DIRPATH = pkg_resources.resource_filename('forecaster', 'stan_models')
+STAN_DIRPATH = pkg_resources.resource_filename('structural', 'stan_models')
 STAN_MODEL_NAME = 'linear_trend'
 DATA_FILEPATH = os.path.join(os.path.dirname(__file__), 'retail_sales.csv')
 
@@ -26,26 +26,15 @@ if __name__ == '__main__':
     # load data
     df = pd.read_csv(DATA_FILEPATH)
 
-    # If picked Stan model not exist, then compile one.  Use if exists.
+    # If pickled Stan model not exist, then compile one.  Use if exists.
     stan_model_filepath = os.path.join(STAN_DIRPATH,
                                        '{}.pkl'.format(STAN_MODEL_NAME))
     if not os.path.exists(stan_model_filepath):
-        LinearTrend.compile_stan_model(stan_model_filepath.replace('.pkl',
-                                                                   '.stan'))
+        Structural.compile_stan_model(stan_model_filepath.replace('.pkl',
+                                                                  '.stan'))
 
-    # Note default Prophet values are (10.0, 0.05, 0.5)
-    # for prior sigmas of `seasonality`, `changepoint`, and `error_sd`
-    model = LinearTrend(stan_model_filepath,
-                        monthly_changepoints=True,
-                        yearly_seasonality=True,
-                        weekly_seasonality=True,
-                        yearly_order=10,
-                        weekly_order=3,
-                        slope_prior_sigma=5.0,
-                        intercept_prior_sigma=5.0,
-                        seasonality_prior_sigma=5.0,
-                        changepoint_prior_sigma=0.5,
-                        error_sd_prior_sigma=5.0).fit(df)
+    # fit model
+    model = LinearTrend(stan_model_filepath).fit(df)
 
     # get fitted values
     yhat_fitted = model.predict(df)
@@ -71,10 +60,18 @@ if __name__ == '__main__':
     # --------------------------------------------
 
     # it's possible to change arguments while using same pickled Stan model
+    # for example, let's use Prophet's defaults for `*_order` and `*_sigma`
     model2 = LinearTrend(stan_model_filepath,
-                         monthly_changepoints=False,
-                         yearly_seasonality=False,
-                         weekly_seasonality=False).fit(df)
+                        monthly_changepoints=True,
+                        yearly_seasonality=True,
+                        weekly_seasonality=True,
+                        yearly_order=10,
+                        weekly_order=3,
+                        slope_prior_sigma=5.0,
+                        intercept_prior_sigma=5.0,
+                        seasonality_prior_sigma=10.0,
+                        changepoint_prior_sigma=0.05,
+                        error_sd_prior_sigma=0.5).fit(df)
 
     # --------------------------------------------
     #
