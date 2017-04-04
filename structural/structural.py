@@ -89,7 +89,7 @@ class Structural(object):
         self.cpt_dates = self.generate_monthly_changepoints(dates=df['ds'])
         self.cpt_t = self.standardize_dates(dates=self.cpt_dates)
 
-        changepoint_df = self.make_changepoint_df(dates=df['ds'])
+        changepoint_df = self.make_changepoint_df(df)
         seasonality_df = self.make_seasonality_df(df)
 
         # PART 2: STAN
@@ -207,16 +207,16 @@ class Structural(object):
     #
     # --------------------------------------------
 
-    def make_changepoint_df(self, dates):
-        """Returns df of indicators for each changepoint (column) at `dates`"""
+    def make_changepoint_df(self, df):
+        """Returns df of indicators evaluated at each row of `df`"""
 
         if self.is_monthly_changepoints:
-            cpt_matrix = [dates >= d for d in self.cpt_dates]
+            cpt_matrix = [df['ds'] >= d for d in self.cpt_dates]
             cpt_names = ['cpt_{}'.format(d.date()) for d in self.cpt_dates]
             return pd.DataFrame(data=np.column_stack(cpt_matrix).astype(float),
                                 columns=cpt_names)
         else:
-            return pd.DataFrame(data={'cpt_zeros': np.zeros(dates.size)})
+            return pd.DataFrame(data={'cpt_zeros': np.zeros(df.shape[0])})
 
     def generate_monthly_changepoints(self, dates):
         """Returns pd.Series of pd.Timestamps and floats"""
