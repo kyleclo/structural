@@ -181,6 +181,9 @@ class Structural(object):
     def fourier_expansion(t, period, order):
         """Returns df of fourier terms evaluated at each `t`"""
 
+        if order > period / 2:
+            raise Exception('order should be <= period/2')
+
         fourier_term_matrix = [
             trig_fun((2.0 * np.pi * (k + 1) * t / period))
             for k in range(order)
@@ -333,3 +336,25 @@ class LinearTrend(Structural):
         yhat_t = (mu_t + s_t).rename('yhat')
 
         return pd.concat([new_df, yhat_t], axis=1)
+
+
+class Hurdle(Structural):
+    """
+
+    """
+
+    def __init__(self,
+                 slope_prior_sigma=5.0,
+                 intercept_prior_sigma=5.0,
+                 seasonality_prior_sigma=5.0,
+                 changepoint_prior_sigma=0.5,
+                 **kwargs):
+
+        self.name = 'linear_trend'
+
+        self.slope_prior_sigma = slope_prior_sigma
+        self.intercept_prior_sigma = intercept_prior_sigma
+        self.changepoint_prior_sigma = float(changepoint_prior_sigma)
+        self.seasonality_prior_sigma = float(seasonality_prior_sigma)
+
+        super(Hurdle, self).__init__(**kwargs)

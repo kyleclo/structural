@@ -1,6 +1,6 @@
 /*
-*  This is a refactored version of 'linear growth' model in Prophet by Facebook.
-*  See their repo here: https://github.com/facebookincubator/prophet
+*  Copyright (c) 2017, Kyle Lo
+*  All rights reserved.
 *
 *  This source code is licensed under the BSD-style license found in the
 *  LICENSE file in the root directory of this source tree.
@@ -23,16 +23,14 @@ data {
   int<lower=1> S;                       // number of seasonality features
   matrix[T, S] X;                       // seasonality features
   real<lower=0> sigma_beta;             // known sd on `beta` prior
-
-  real<lower=0> tau;                    // known scale param on `sigma_y` prior
 }
 
 parameters {
+  real<lower=0, upper=1> p;             // prob of one class vs other
   real m;                               // base slope
   real b;                               // base intercept
   vector[C] delta;                      // changepoint effects (slope changes)
   vector[S] beta;                       // seasonality effects
-  real<lower=0> sigma_y;                // sd of observations
 }
 
 transformed parameters {
@@ -49,9 +47,12 @@ model {
   b ~ normal(0, sigma_b);
   delta ~ double_exponential(0, sigma_delta);
   beta ~ normal(0, sigma_beta);
-  sigma_y ~ cauchy(0, tau);
 
   // Likelihood
-  y ~ normal((m + cpt_df * delta) .* t + (b + cpt_df * gamma) + X * beta, sigma_y);
+  for (i in 1:T) {
+    (y[i] == 0) ~ bernoulli(p);
+    if (y[i] > 0)
+      y[i] ~ poisson((m + cpt_df[i] * delta) * t[i] + (b + cpt_df[i] * gamma) + X * beta) T[1, ];
+  }
 }
 
