@@ -11,6 +11,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import pickle
+
 from pystan import StanModel
 
 import numpy as np
@@ -314,6 +315,7 @@ class LinearTrend(Structural):
 
         return stan_fit_params
 
+    # TODO: CHANGE GAMMAS SO NOT SERIES. REQUIRES CHANGING CPT_T TO NUMPY
     def _predict_standardized(self, new_df, new_t):
         """Predicts values at each `ds` date in `new_df`"""
 
@@ -338,23 +340,4 @@ class LinearTrend(Structural):
         return pd.concat([new_df, yhat_t], axis=1)
 
 
-class Hurdle(Structural):
-    """
 
-    """
-
-    def __init__(self,
-                 slope_prior_sigma=5.0,
-                 intercept_prior_sigma=5.0,
-                 seasonality_prior_sigma=5.0,
-                 changepoint_prior_sigma=0.5,
-                 **kwargs):
-
-        self.name = 'linear_trend'
-
-        self.slope_prior_sigma = slope_prior_sigma
-        self.intercept_prior_sigma = intercept_prior_sigma
-        self.changepoint_prior_sigma = float(changepoint_prior_sigma)
-        self.seasonality_prior_sigma = float(seasonality_prior_sigma)
-
-        super(Hurdle, self).__init__(**kwargs)
