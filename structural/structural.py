@@ -135,7 +135,7 @@ class Structural(object):
         with open(input_stan_filepath) as f:
             model_code = f.read()
 
-        model = StanModel(model_code=model_code)
+        model = StanModel(model_code=model_code, verbose=True)
 
         if output_model_filepath is None:
             output_model_filepath = input_stan_filepath.replace('.stan',
