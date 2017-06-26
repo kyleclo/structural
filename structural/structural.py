@@ -10,7 +10,10 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import pickle
+try:
+    import cPickle as pickle
+except:
+    import pickle
 
 from pystan import StanModel
 
@@ -104,10 +107,10 @@ class Structural(object):
         return self
 
     def _fit_with_stan(self, t, y_scaled, changepoint_df, seasonality_df):
+        """Returns dict of MAP estimates"""
         raise NotImplementedError
 
     def predict(self, new_df):
-        """Predicts values at each `ds` date in `new_df`"""
 
         new_df = self.prepare_df(df=new_df)
         new_t = self.standardize_dates(dates=new_df['ds'])
@@ -118,6 +121,7 @@ class Structural(object):
         return predicted_df
 
     def _predict_standardized(self, new_df, new_t):
+        """Predicts values at each `ds` date in `new_df`"""
         raise NotImplementedError
 
     # --------------------------------------------
@@ -281,7 +285,7 @@ class LinearTrend(Structural):
         """Returns dict of MAP estimates"""
 
         stan_data = {
-            'T': y_scaled.size,
+            'N': y_scaled.size,
             't': t,
             'y': y_scaled,
             'tau': self.error_sd_prior_sigma,
@@ -315,18 +319,17 @@ class LinearTrend(Structural):
 
         return stan_fit_params
 
-    # TODO: CHANGE GAMMAS SO NOT SERIES. REQUIRES CHANGING CPT_T TO NUMPY
     def _predict_standardized(self, new_df, new_t):
         """Predicts values at each `ds` date in `new_df`"""
 
         # COMPUTE TREND OVER TIME
-        gammas = -self.cpt_t * self.stan_fit_params['delta']
+        gammas = -self.cpt_t.values * self.stan_fit_params['delta']
         m_t = self.stan_fit_params['m'].repeat(new_t.size)
         b_t = self.stan_fit_params['b'].repeat(new_t.size)
         for j, cpt_t in enumerate(self.cpt_t):
             index_t = new_t >= cpt_t
             m_t[index_t] += self.stan_fit_params['delta'][j]
-            b_t[index_t] += gammas.iloc[j]
+            b_t[index_t] += gammas[j]
         mu_t = (m_t * new_t + b_t).rename('trend')
 
         # COMPUTE SEASONALITY COMPONENT OVER TIME

@@ -8,20 +8,20 @@
 
 
 data {
-  int T;                                // sample size
-  vector[T] t;                          // time indices
-  vector[T] y;                          // time series values
+  int N;                                // sample size
+  vector[N] t;                          // time indices
+  vector[N] y;                          // time series values
 
   real<lower=0> sigma_m;                // known sd on `m` prior
   real<lower=0> sigma_b;                // known sd on `b` prior
 
   int<lower=1> C;                       // number of changepoints
   vector[C] cpt_t;                      // changepoint time indices
-  matrix[T, C] cpt_df;                  // changepoint indicator features
+  matrix[N, C] cpt_df;                  // changepoint indicator features
   real<lower=0> sigma_delta;            // known scale param on `delta` prior
 
   int<lower=1> S;                       // number of seasonality features
-  matrix[T, S] X;                       // seasonality features
+  matrix[N, S] X;                       // seasonality features
   real<lower=0> sigma_beta;             // known sd on `beta` prior
 
   real<lower=0> tau;                    // known scale param on `sigma_y` prior
