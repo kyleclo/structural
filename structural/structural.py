@@ -24,22 +24,28 @@ import pandas as pd
 class Structural(object):
     def __init__(self,
                  stan_model_filepath,
-                 is_monthly_changepoints=True,
+                 is_changepoints=True,
+                 is_monthly_changepoints=False,
                  is_yearly_seasonality=True,
+                 is_monthly_seasonality=True,
                  is_weekly_seasonality=True,
-                 yearly_order=5,
+                 yearly_order=10,
+                 monthly_order=5,
                  weekly_order=3):
 
         # FILEPATH TO STAN MODEL (.PKL OR .STAN)
         self.model = self.import_stan_model(stan_model_filepath)
 
         # CHANGEPOINTS IN MEAN TREND
+        self.is_changepoints = is_changepoints
         self.is_monthly_changepoints = is_monthly_changepoints
 
         # SEASONALITY COMPONENT
         self.is_yearly_seasonality = is_yearly_seasonality
+        self.is_monthly_seasonality = is_monthly_seasonality
         self.is_weekly_seasonality = is_weekly_seasonality
         self.yearly_order = yearly_order
+        self.monthly_order = monthly_order
         self.weekly_order = weekly_order
 
         # DERIVED FROM `df` DURING PROCESSING PHASE OF fit()
@@ -88,7 +94,12 @@ class Structural(object):
         self.y_min = df['y'].min()
         self.y_max = df['y'].max()
 
-        self.cpt_dates = self.generate_monthly_changepoints(dates=df['ds'])
+        if self.cpt_dates is not None:
+            pass
+        elif self.is_monthly_changepoints:
+            self.cpt_dates = self.generate_monthly_changepoints(dates=df['ds'])
+        else:
+            self.cpt_dates = df['ds']
         self.cpt_t = self.standardize_dates(dates=self.cpt_dates)
 
         self.last_observed_date = df['ds'].iloc[-1]
@@ -110,17 +121,17 @@ class Structural(object):
         """Returns dict of MAP estimates"""
         raise NotImplementedError
 
-    def predict(self, new_df):
+    def predict(self, new_df, is_components=False):
 
         new_df = self.prepare_df(df=new_df)
         new_t = self.standardize_dates(dates=new_df['ds'])
 
-        predicted_df = self._predict_standardized(new_df, new_t)
+        predicted_df = self._predict_standardized(new_df, new_t, is_components)
         predicted_df['yhat'] = self.unstandardize_y(y=predicted_df['yhat'])
 
         return predicted_df
 
-    def _predict_standardized(self, new_df, new_t):
+    def _predict_standardized(self, new_df, new_t, is_components):
         """Predicts values at each `ds` date in `new_df`"""
         raise NotImplementedError
 
@@ -219,6 +230,14 @@ class Structural(object):
                     columns=lambda name: 'yearly_{}'.format(name))
             )
 
+        if self.is_monthly_seasonality:
+            seasonality_features.append(
+                self.fourier_expansion(t=t,
+                                       period=30.5,
+                                       order=self.monthly_order).rename(
+                    columns=lambda name: 'monthly_{}'.format(name))
+            )
+
         if self.is_weekly_seasonality:
             seasonality_features.append(
                 self.fourier_expansion(t=t,
@@ -241,7 +260,7 @@ class Structural(object):
     def make_changepoint_df(self, df):
         """Returns df of indicators evaluated at each row of `df`"""
 
-        if self.is_monthly_changepoints:
+        if self.is_changepoints:
             cpt_matrix = [df['ds'] >= d for d in self.cpt_dates]
             cpt_names = ['cpt_{}'.format(d.date()) for d in self.cpt_dates]
             return pd.DataFrame(data=np.column_stack(cpt_matrix).astype(float),
@@ -313,13 +332,13 @@ class LinearTrend(Structural):
 
         stan_fit_params = self.model.optimizing(data=stan_data,
                                                 init=stan_init,
-                                                iter=1e4)
+                                                iter=1e8)
         for key, value in stan_fit_params.iteritems():
             stan_fit_params[key] = value.reshape(-1, )
 
         return stan_fit_params
 
-    def _predict_standardized(self, new_df, new_t):
+    def _predict_standardized(self, new_df, new_t, is_components):
         """Predicts values at each `ds` date in `new_df`"""
 
         # COMPUTE TREND OVER TIME
@@ -333,14 +352,14 @@ class LinearTrend(Structural):
         mu_t = (m_t * new_t + b_t).rename('trend')
 
         # COMPUTE SEASONALITY COMPONENT OVER TIME
-        s_t = (self.make_seasonality_df(new_df)
-               .dot(self.stan_fit_params['beta'])
-               .rename('seasonality'))
+        s_t = self.make_seasonality_df(new_df) \
+            .dot(self.stan_fit_params['beta']) \
+            .rename('seasonality')
 
         # ELEMENT-WISE SUM OF SERIES
         yhat_t = (mu_t + s_t).rename('yhat')
 
-        return pd.concat([new_df, yhat_t], axis=1)
-
-
-
+        if is_components:
+            return pd.concat([new_df, yhat_t, mu_t, s_t], axis=1)
+        else:
+            return pd.concat([new_df, yhat_t], axis=1)

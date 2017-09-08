@@ -4,6 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import numpy as np
 import pandas as pd
 from structural import Structural, LinearTrend
 
@@ -14,7 +15,7 @@ import pkg_resources
 
 STAN_DIRPATH = pkg_resources.resource_filename('structural', 'stan_models')
 STAN_MODEL_NAME = 'linear_trend'
-DATA_FILEPATH = os.path.join(os.path.dirname(__file__), 'retail_sales.csv')
+DATA_FILEPATH = os.path.join(os.path.dirname(__file__), 'hveravellir.csv')
 
 if __name__ == '__main__':
     # --------------------------------------------
@@ -25,6 +26,7 @@ if __name__ == '__main__':
 
     # load data
     df = pd.read_csv(DATA_FILEPATH)
+    Structural.prepare_df(df).set_index('ds').plot()
 
     # If pickled Stan model not exist, then compile one.  Use if exists.
     stan_model_filepath = os.path.join(STAN_DIRPATH,
@@ -34,10 +36,17 @@ if __name__ == '__main__':
                                                                   '.stan'))
 
     # fit model
-    model = LinearTrend(stan_model_filepath=stan_model_filepath).fit(df)
+    model = LinearTrend(stan_model_filepath=stan_model_filepath,
+                        changepoint_prior_sigma=0.1,
+                        yearly_order=5,
+                        weekly_order=3,
+                        is_monthly_seasonality=False).fit(df)
 
     # get fitted values
-    yhat_fitted = model.predict(df)
+    yhat_fitted = model.predict(df, is_components=True)
+
+    # where changepoints?
+    np.where(model.stan_fit_params['delta'].round(3).tolist())[0]
 
     # forecast next 1000 days
     new_df = pd.DataFrame({'ds': model.make_forecast_dates(h=1000)})
